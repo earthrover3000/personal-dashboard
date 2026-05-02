@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Dashboard &mdash; Spec</title>
+  <link rel="icon" href="../../../../素材 Assets/样式 Styles/favicon.svg">
+  <link rel="stylesheet" href="../../../../素材 Assets/样式 Styles/docs.css">
+</head>
+<body>
+<div class="container">
+  <h1>Personal Dashboard &mdash; Spec</h1>
+  <p class="subtitle">Sections and items planned for the published dashboard at <code>../../index.html</code>.</p>
+  <div class="loading" id="loading-msg">Loading dashboard spec&hellip;</div>
+  <div id="sections-container"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>
+<script>
+  async function fetchYaml() {
+    const res = await fetch('plans/dashboard.yaml');
+    if (!res.ok) throw new Error('Failed to load plans/dashboard.yaml (HTTP ' + res.status + ')');
+    return jsyaml.load(await res.text());
+  }
+
+  function renderItem(ul, item) {
+    const li = document.createElement('li');
+    let label = item.text || '';
+    if (item.when) label += ' (' + item.when + ')';
+    li.textContent = label;
+    ul.appendChild(li);
+  }
+
+  function render(data) {
+    const container = document.getElementById('sections-container');
+    container.innerHTML = '';
+    (data.sections || []).forEach(sec => {
+      const section = document.createElement('section');
+      section.id = sec.id;
+      const h2 = document.createElement('h2');
+      h2.textContent = sec.title;
+      section.appendChild(h2);
+      const ul = document.createElement('ul');
+      (sec.items || []).forEach(item => renderItem(ul, item));
+      section.appendChild(ul);
+      container.appendChild(section);
+    });
+    document.getElementById('loading-msg').style.display = 'none';
+  }
+
+  async function loadData() {
+    try {
+      const data = await fetchYaml();
+      render(data);
+    } catch (e) {
+      document.getElementById('loading-msg').textContent =
+        'Error: could not load dashboard.yaml. Are you serving the page over HTTP?';
+      console.error(e);
+    }
+  }
+
+  loadData();
+</script>
+</body>
+</html>

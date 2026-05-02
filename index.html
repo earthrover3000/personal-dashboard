@@ -1,51 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personal Dashboard</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Dashboard</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; color: #222; }
+    h1 { margin: 0 0 1.5rem; }
+    .reminders { padding: 0.75rem 1rem; border: 1px solid #e0a000; background: #fffbe6; border-radius: 4px; }
+    .reminders strong { display: block; margin-bottom: 0.25rem; }
+    .reminders ul { list-style: none; padding: 0; margin: 0; }
+    .reminders li { padding: 0.25rem 0; }
+    .reminders label { cursor: pointer; }
+    .reminders input { margin-right: 0.4rem; transform: translateY(1px); }
+    .empty-state { color: #888; font-style: italic; }
+    .hidden { display: none; }
+  </style>
 </head>
 <body>
-    <h1>Personal Dashboard</h1>
+  <h1>Personal Dashboard</h1>
 
-    <section>
-        <h2>Medication</h2>
-        <ul>
-            <li>Take medication</li>
-        </ul>
-    </section>
+  <div id="reminders" class="reminders hidden">
+    <strong>Reminders</strong>
+    <ul id="reminder-list"></ul>
+  </div>
+  <p id="empty-state" class="empty-state">No reminders right now.</p>
 
-    <section>
-        <h2>Grocery Delivery</h2>
-        <ul>
-            <li>Finalize delivery order (T-1)</li>
-            <li>Put groceries in the fridge (T+0)</li>
-            <li>Put sausages in the freezer (T+0)</li>
-        </ul>
-    </section>
+  <script>
+    const SCHEDULES = [
+      { id: 'medication-am', hour: 8,  minute: 30, label: 'Take medication' },
+      { id: 'medication-pm', hour: 20, minute: 30, label: 'Take medication' }
+    ];
+    const STORAGE_PREFIX = 'reminder-dismissed:';
 
-    <section>
-        <h2>Laundry</h2>
-        <ul>
-            <li>Put wet laundry in the dryer</li>
-            <li>Fold and put away dry laundry</li>
-        </ul>
-    </section>
+    function lastDueTime(now, hour, minute) {
+      const t = new Date(now);
+      t.setHours(hour, minute, 0, 0);
+      if (t.getTime() > now.getTime()) t.setDate(t.getDate() - 1);
+      return t.getTime();
+    }
 
-    <section>
-        <h2>Personal Hygiene</h2>
-        <ul>
-            <li>Days since last shower</li>
-            <li>Days since last hair wash</li>
-            <li>Days since last face wash</li>
-        </ul>
-    </section>
+    function activeReminders() {
+      const now = new Date();
+      return SCHEDULES.filter(s => {
+        const due = lastDueTime(now, s.hour, s.minute);
+        const dismissed = parseInt(localStorage.getItem(STORAGE_PREFIX + s.id) || '0', 10);
+        return dismissed < due;
+      });
+    }
 
-    <section>
-        <h2>Cleaner</h2>
-        <ul>
-            <li>Confirm date and time with the cleaner</li>
-        </ul>
-    </section>
+    function dismiss(id) {
+      localStorage.setItem(STORAGE_PREFIX + id, Date.now().toString());
+      render();
+    }
+
+    function render() {
+      const active = activeReminders();
+      const box = document.getElementById('reminders');
+      const list = document.getElementById('reminder-list');
+      const empty = document.getElementById('empty-state');
+      list.innerHTML = '';
+      if (active.length === 0) {
+        box.classList.add('hidden');
+        empty.classList.remove('hidden');
+        return;
+      }
+      box.classList.remove('hidden');
+      empty.classList.add('hidden');
+      active.forEach(r => {
+        const li = document.createElement('li');
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.addEventListener('change', () => dismiss(r.id));
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(r.label));
+        li.appendChild(label);
+        list.appendChild(li);
+      });
+    }
+
+    render();
+    setInterval(render, 30 * 1000);
+  </script>
 </body>
 </html>

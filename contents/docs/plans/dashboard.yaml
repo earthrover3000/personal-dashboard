@@ -1,0 +1,32 @@
+sections:
+  - id: medication
+    title: Medication
+    items:
+      - text: Take medication
+  - id: grocery-delivery
+    title: Grocery Delivery
+    items:
+      - text: Finalize delivery order
+        when: T-1
+      - text: Put groceries in the fridge
+        when: T+0
+      - text: Put sausages in the freezer
+        when: T+0
+  - id: laundry
+    title: Laundry
+    items:
+      - text: Put wet laundry in the dryer
+      - text: Fold and put away dry laundry
+  - id: personal-hygiene
+    title: Personal Hygiene
+    items:
+      - text: Days since last shower
+        kind: counter
+      - text: Days since last hair wash
+        kind: counter
+      - text: Days since last face wash
+        kind: counter
+  - id: cleaner
+    title: Cleaner
+    items:
+      - text: Confirm date and time with the cleaner
