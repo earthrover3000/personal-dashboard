@@ -10,9 +10,10 @@
     .reminders { padding: 0.75rem 1rem; border: 1px solid #e0a000; background: #fffbe6; border-radius: 4px; }
     .reminders strong { display: block; margin-bottom: 0.25rem; }
     .reminders ul { list-style: none; padding: 0; margin: 0; }
-    .reminders li { padding: 0.25rem 0; }
+    .reminders li { padding: 0.25rem 0; display: flex; align-items: center; }
     .reminders label { cursor: pointer; }
     .reminders input { margin-right: 0.4rem; transform: translateY(1px); }
+    .reminder-time { margin-left: auto; color: #888; font-size: 0.85em; font-variant-numeric: tabular-nums; }
     .empty-state { color: #888; font-style: italic; }
     .hidden { display: none; }
   </style>
@@ -42,11 +43,12 @@
 
     function activeReminders() {
       const now = new Date();
-      return SCHEDULES.filter(s => {
-        const due = lastDueTime(now, s.hour, s.minute);
-        const dismissed = parseInt(localStorage.getItem(STORAGE_PREFIX + s.id) || '0', 10);
-        return dismissed < due;
-      });
+      return SCHEDULES
+        .map(s => ({ ...s, due: lastDueTime(now, s.hour, s.minute) }))
+        .filter(s => {
+          const dismissed = parseInt(localStorage.getItem(STORAGE_PREFIX + s.id) || '0', 10);
+          return dismissed < s.due;
+        });
     }
 
     function dismiss(id) {
@@ -76,6 +78,15 @@
         label.appendChild(cb);
         label.appendChild(document.createTextNode(r.label));
         li.appendChild(label);
+        const time = document.createElement('span');
+        time.className = 'reminder-time';
+        const d = new Date(r.due);
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const dateStr = `${days[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()}`;
+        const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        time.textContent = `${dateStr} · ${timeStr}`;
+        li.appendChild(time);
         list.appendChild(li);
       });
     }
