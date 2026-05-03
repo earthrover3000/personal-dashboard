@@ -1,8 +1,9 @@
 // Bump CACHE when shipping a change you want clients to pick up immediately on next load.
-const CACHE = 'dashboard-v1';
+const CACHE = 'dashboard-v2';
 const ASSETS = [
   './',
   './index.html',
+  './settings.html',
   './icon.svg',
   './manifest.webmanifest'
 ];
