@@ -1,81 +1,66 @@
+import json
 import os
 import subprocess
 import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..', '..'))
+# This app's root — the dashboard folder inside the 工坊 Workshop monorepo.
+APP_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, '..', '..', '..'))
+
+
+def get_remote_url():
+    """Publish remote, read from site.json (the Launchpad manifest).
+
+    The dashboard is no longer its own git repo — it's a subtree inside the
+    工坊 Workshop monorepo — so the remote is taken from site.json rather than
+    `git remote get-url origin`."""
+    with open(os.path.join(APP_ROOT, 'site.json'), encoding='utf-8') as f:
+        return json.load(f)['sync']['remote']
+
+
+def monorepo_and_prefix():
+    """Return (monorepo root, this app's path within it).
+
+    We publish with `git subtree push` from the monorepo root, using this
+    folder's relative path as the prefix."""
+    top = subprocess.run(
+        ['git', 'rev-parse', '--show-toplevel'],
+        cwd=APP_ROOT, capture_output=True, text=True, check=True
+    ).stdout.strip()
+    prefix = os.path.relpath(APP_ROOT, top).replace(os.sep, '/')
+    return top, prefix
 
 
 def run(cmd, cwd):
     subprocess.run(cmd, cwd=cwd, check=True)
 
 
-def ensure_git_user(cwd):
-    email = subprocess.run(
-        ['git', 'config', 'user.email'],
-        cwd=cwd, capture_output=True, text=True
-    ).stdout.strip()
-    if not email:
-        run(['git', 'config', 'user.email', '140817883+earthrover3000@users.noreply.github.com'], cwd)
-        run(['git', 'config', 'user.name', 'earthrover3000'], cwd)
-
-
-def check_not_behind(cwd):
-    try:
-        subprocess.run(
-            ['git', 'fetch'],
-            cwd=cwd, check=True, capture_output=True
-        )
-        local = subprocess.run(
-            ['git', 'rev-parse', 'HEAD'],
-            cwd=cwd, capture_output=True, text=True, check=True
-        ).stdout.strip()
-        remote = subprocess.run(
-            ['git', 'rev-parse', 'origin/main'],
-            cwd=cwd, capture_output=True, text=True, check=True
-        ).stdout.strip()
-        behind = int(subprocess.run(
-            ['git', 'rev-list', '--count', f'{local}..{remote}'],
-            cwd=cwd, capture_output=True, text=True, check=True
-        ).stdout.strip())
-    except Exception:
-        return
-
-    if behind == 0:
-        return
-
-    print(f"WARNING: Repo is {behind} commit(s) behind origin/main.")
-    print("MEGA may have synced changes from another machine that you haven't seen.")
-    answer = input("Push anyway? [y/N] ").strip().lower()
-    if answer != 'y':
-        print("Aborted.")
-        raise SystemExit(0)
-
-
 def main():
     msg = ' '.join(sys.argv[1:]).strip() or 'update dashboard'
+    top, prefix = monorepo_and_prefix()
+    remote = get_remote_url()
 
-    print(f"Pushing from: {REPO_ROOT}")
-    print(f"Commit message: {msg}")
-    print()
-    check_not_behind(REPO_ROOT)
-    ensure_git_user(REPO_ROOT)
-
+    # 1) Commit THIS app's changes into the monorepo, scoped to its prefix so
+    #    nothing from other projects is swept in. subtree push publishes the
+    #    committed state, so an uncommitted edit would otherwise not go live.
     status = subprocess.run(
-        ['git', 'status', '--porcelain'],
-        cwd=REPO_ROOT, capture_output=True, text=True, check=True
+        ['git', 'status', '--porcelain', '--', prefix],
+        cwd=top, capture_output=True, text=True, check=True
     ).stdout.strip()
     if status:
-        run(['git', 'add', '.'], REPO_ROOT)
-        run(['git', 'commit', '-m', msg], REPO_ROOT)
+        print("Committing dashboard changes to the monorepo...")
+        run(['git', 'add', '--', prefix], top)
+        run(['git', 'commit', '-m', msg], top)
     else:
-        print("No working tree changes; pushing any unpushed commits.")
+        print("No dashboard changes; publishing current committed state.")
 
-    run(['git', 'push', 'origin', 'main'], REPO_ROOT)
+    # 2) Publish just this subtree to its own GitHub repo (Pages serves it).
+    print(f"subtree push  {prefix}  ->  {remote}")
+    run(['git', 'subtree', 'push', '--prefix', prefix, remote, 'main'], top)
+
     print()
     print("Done! Live URL (1-2 min after push):")
     print("https://earthrover3000.github.io/personal-dashboard/")
-    input("Press Enter to continue...")
 
 
 if __name__ == '__main__':
@@ -83,4 +68,3 @@ if __name__ == '__main__':
         main()
     except Exception as e:
         print(f"\nError: {e}")
-        input("Press Enter to continue...")
