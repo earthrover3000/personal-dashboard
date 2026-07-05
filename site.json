@@ -1,0 +1,8 @@
+{
+  "label": "个人看板 Personal Dashboard",
+  "key": "d",
+  "serve": {"port": 8000, "argv": ["python", "contents/scripts/src/serve.py"]},
+  "push": ["python", "contents/scripts/src/push.py"],
+  "sync": {"remote": "https://github.com/earthrover3000/personal-dashboard.git"},
+  "more": ["sync"]
+}
